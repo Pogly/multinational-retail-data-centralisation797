@@ -89,3 +89,5 @@ class DataCleaning():
         #Remove NULL values
         cleandf = cleandf.dropna()
 
+        return cleandf
+

@@ -47,4 +47,6 @@ dataCleaning = DataCleaning()
 
 #Date Time Data
 dateTimeDataframe = dataExtractor.extract_from_s3('https://data-handling-public.s3.eu-west-1.amazonaws.com/date_details.json')
-dateTimeDataframe.to_csv("cleanDateTimeDataframe.csv")
+cleanDateTimeDataframe = dataCleaning.clean_date_time(dateTimeDataframe)
+cleanDateTimeDataframe.to_csv("cleanDateTimeDataframe.csv")
+cleanDateTimeDataframe = databaseconncter.upload_to_db(cleanDateTimeDataframe,'dim_date_times')
