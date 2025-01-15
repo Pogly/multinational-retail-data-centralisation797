@@ -23,13 +23,11 @@ class DatabaseConnector():
         engine = sq.create_engine(f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{database}")
         return engine
 
-    def list_db_tables(self):
-        engine = self.init_db_engine()
+    def list_db_tables(self,engine):
 
         engine.connect()
         inspector = sq.inspect(engine,)
         tablenames = inspector.get_table_names()
-        engine.close()
 
         return tablenames
     

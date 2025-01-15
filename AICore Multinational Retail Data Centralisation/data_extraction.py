@@ -3,7 +3,9 @@ from database_utils import DatabaseConnector
 import tabula
 import requests
 import boto3
-from io import StringIO  
+import io  
+import json
+import csv
 
 
 class DataExtractor():
@@ -37,14 +39,32 @@ class DataExtractor():
                 storeDataFrame = pd.concat([storeDataFrame, additional_data], ignore_index=True)
         return storeDataFrame
     
-    def extract_from_s3(self):
-        bucket = 'data-handling-public'
-        filekey = 'products.csv'
+    def extract_from_s3(self,url):
+        #bucket = 'data-handling-public'
+        #filekey = 'products.csv'
 
-        s3 = boto3.client('s3')
-        #obj = s3.download_file(bucket, filekey, r"C:\Users\benja\Documents\AICore Test Code\AICore Multinational Retail Data Centralisation\products.csv")
-        s3_object = s3.get_object(Bucket=bucket, Key=filekey)
-        s3_data = s3_object['Body'].read().decode('utf-8')
-        df = pd.read_csv(StringIO(s3_data))
-        print(df)
+        print('Working')
+        #url = 'https://data-handling-public.s3.eu-west-1.amazonaws.com/products.csv'
+        headers = {'Host': 'data-handling-public.s3-eu-west-1.amazonaws.com'}
+        r = requests.get(url, headers=headers).content
+
+        success = False
+        try:
+            print('trying to read PDF')
+            csv.loads(r)
+            df = pd.read_csv(io.StringIO(r.decode('utf-8')))
+            return df
+            success = True
+        except:
+            print("NotPDF")
+            pass
+        try:
+            print('trying to read Json')
+            json.loads(r)
+            df = pd.read_json(io.StringIO(r.decode('utf-8')))
+            return df
+            success = True
+        except:
+            print("NotJson")
+            pass
         
