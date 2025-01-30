@@ -1,8 +1,6 @@
 import pandas as pd
-from database_utils import DatabaseConnector
 import tabula
 import requests
-import boto3
 import io  
 import json
 import csv
@@ -11,12 +9,14 @@ import csv
 class DataExtractor():
 
     def read_rds_table(self,engine,tableName):
-        dataframe = pd.read_sql_table('legacy_users', engine)
-        return dataframe
+        dataFrame = pd.read_sql_table(tableName, engine)
+        return dataFrame
     
-    def retrieve_pdf_data(self):
-        pdf_path =  'https://data-handling-public.s3.eu-west-1.amazonaws.com/card_details.pdf'
-        pdfDataFrame = pd.concat(tabula.read_pdf(pdf_path, pages="all",stream=True))
+    def retrieve_pdf_data(self,html):
+        pdf_path = html
+        dataFrame = pd.concat(tabula.read_pdf(pdf_path, pages="all"))
+        return dataFrame
+    
 
     def list_number_of_stores(self,header):
 
@@ -40,31 +40,24 @@ class DataExtractor():
         return storeDataFrame
     
     def extract_from_s3(self,url):
-        #bucket = 'data-handling-public'
-        #filekey = 'products.csv'
-
-        print('Working')
-        #url = 'https://data-handling-public.s3.eu-west-1.amazonaws.com/products.csv'
+        #Find S3 bucket
         headers = {'Host': 'data-handling-public.s3-eu-west-1.amazonaws.com'}
-        r = requests.get(url, headers=headers).content
+        request = requests.get(url, headers=headers).content
 
-        success = False
+        #Read Csv Files
         try:
-            print('trying to read PDF')
-            csv.loads(r)
-            df = pd.read_csv(io.StringIO(r.decode('utf-8')))
+            df = pd.read_csv(io.StringIO(request.decode('utf-8')))
             return df
-            success = True
         except:
-            print("NotPDF")
+            print('notCSV')
             pass
+        #Read Json Files
         try:
-            print('trying to read Json')
-            json.loads(r)
-            df = pd.read_json(io.StringIO(r.decode('utf-8')))
+            json.loads(request)
+            df = pd.read_json(io.StringIO(request.decode('utf-8')))
             return df
-            success = True
         except:
-            print("NotJson")
+            print('notJSON')
             pass
+        
         

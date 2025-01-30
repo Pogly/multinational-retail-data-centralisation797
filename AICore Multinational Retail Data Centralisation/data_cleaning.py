@@ -1,54 +1,65 @@
 import pandas as pd
 import numpy as np
 from data_extraction import DataExtractor
-import re                                                         
+import re                                                       
 
 
 class DataCleaning():
-    def clean_user_data(df):
-
-        #Change "NULL" strings data type into NULL data type
-        cleandf = df.replace('NULL', None)
+    def clean_user_data(self,dataFrame):
         #Convert "join_date" column into a datetime data type
-        cleandf.join_date = pd.to_datetime(cleandf.join_date,errors='coerce')
-        #Remove NULL values
-        cleandf = cleandf.dropna()
-               
-        return cleandf
-    def clean_card_data(df):
-         #Change "NULL" strings data type into NULL data type
-        cleandf = df.replace(['NULL','N/A', 'None'] , None)
-        #Remove duplacit/non-numerical card numbers
-        cleandf.card_number = pd.to_numeric(cleandf.card_number,errors='coerce')
-        cleandf = cleandf.drop_duplicates(subset="card_number")
-        #Convert "date_payment_confirmed" column into a datetime data type
-        cleandf.date_payment_confirmed = pd.to_datetime(cleandf.date_payment_confirmed,errors='coerce')
-        #Remove NULL values
-        cleandf = cleandf.dropna(subset=['card_number', 'expiry_date','card_provider','date_payment_confirmed'])
-
-        return cleandf
-    
-    def called_clean_store_data(df):
+        dataFrame.join_date = pd.to_datetime(dataFrame.join_date,format='mixed',errors='coerce')
         #Change "NULL" strings data type into NULL data type
-        cleandf = df.drop(columns=['lat'])
-        cleandf = cleandf.replace(['NULL','N/A', 'None'] , None)
-        #Convert  "opening_date" column into a datetime data type
-        cleandf.opening_date = pd.to_datetime(cleandf.opening_date,errors='coerce')
-        #Strip away symbols, letters, and white spaces from "staff_number" column
-        cleandf.staff_numbers = cleandf.staff_numbers.str.strip()
-        cleandf.staff_numbers = cleandf.staff_numbers.str.replace(r'\D+', '')
+        dataFrame = dataFrame.replace(['NULL'], None)
         #Remove NULL values
-        cleandf = cleandf.dropna()
+        dataFrame = dataFrame.dropna()
+        return dataFrame
 
-        return cleandf
+    def clean_card_data(self,dataFrame):
+         #Change "NULL" strings data type into NULL data type
+        dataFrame = dataFrame.replace(['NULL','N/A', 'None'] , None)
+        #Remove no numeric values
+        dataFrame['card_number'] = dataFrame['card_number'].astype(str).str.strip()
+        dataFrame['card_number'] = dataFrame['card_number'].str.replace(r'\D+', '', regex=True)
+        # Remove duplicate card numbers
+        dataFrame = dataFrame.drop_duplicates(subset="card_number")
+        #Convert "date_payment_confirmed" column into a datetime data type
+        dataFrame.date_payment_confirmed = pd.to_datetime(dataFrame.date_payment_confirmed,format='mixed',errors='coerce')
+        #Remove NULL values
+        dataFrame = dataFrame.dropna(subset=['card_number', 'expiry_date','card_provider','date_payment_confirmed'])
+        return dataFrame
     
-    def convert_product_weights(self,df):
+    def called_clean_store_data(self,dataFrame):
+        #Change "NULL" strings data type into NULL data type
+        dataFrame = dataFrame.drop(columns=['lat'])
+        #Convert  "opening_date" column into a datetime data type
+        dataFrame.opening_date = pd.to_datetime(dataFrame.opening_date,errors='coerce')
+        #Strip away symbols, letters, and white spaces from "staff_number" column
+        dataFrame.staff_numbers = dataFrame['staff_numbers'].str.replace(r'[^0-9]', '', regex=True)
+        dataFrame.staff_numbers = dataFrame.staff_numbers.str.strip()
+        dataFrame.staff_numbers = pd.to_numeric(dataFrame.staff_numbers,errors='coerce')
+        #Clear Nulls in storecode
+        dataFrame.store_code = dataFrame.store_code.replace(['NULL','N/A', 'None'] , None)
+        dataFrame = dataFrame.dropna(subset=['store_code'])
+        return dataFrame
+    
+    def convert_product_weights(self,dataFrame):
         def convert_weight(value):
-            match = re.match(r'(\d+\.?\d*)\s*(\w+)?', str(value))
-            if not match:
-                return None
-            weight, unit = match.groups()
-            weight = float(weight)
+            multy = re.match(r'(\d+)\s*[xX]\s*(\d+\.?\d*)\s*(\w+)?',str(value))
+            if multy:
+                numb1, numb2, unit = multy.groups()
+                weight = float( float(numb1)* float(numb2))
+            else:
+
+                match = re.match(r'(\d+\.?\d*)\s*(\w+)?', str(value))
+                if match:
+                    weight, unit = match.groups()
+                    weight = float(weight)
+                else:
+                    return None
+
+
+                weight, unit = match.groups()
+                weight = float(weight)
 
             if unit in ['kg']:
                 return weight
@@ -56,38 +67,40 @@ class DataCleaning():
                 return weight / 1000
             elif unit in ['ml']:
                 return weight / 1000
+            elif unit in ['oz']:
+                return weight / 35.274
             else:
                 return None
 
-        df["weight"] = df["weight"].apply(convert_weight)
+        dataFrame["weight"] = dataFrame["weight"].apply(convert_weight)
 
-        return df
+        return dataFrame
     
-    def clean_products_data(df):
+    def clean_products_data(self,dataFrame):
         #Convert all weight into kg units
-        cleandf = DataCleaning.convert_product_weights(df)
+        dataFrame = self.convert_product_weights(dataFrame)
         #Change "NULL" strings data type into NULL data type
-        cleandf = df.replace(['NULL','N/A', 'None'] , None)
+        dataFrame = dataFrame.replace(['NULL','N/A', 'None'] , None)
         #Remove NULL values
-        cleandf = df.dropna()
+        dataFrame = dataFrame.dropna()
 
-        return df
+        return dataFrame
     
-    def clean_orders_data(self,df):
+    def clean_orders_data(self,dataFrame):
         #Remove unwanted columns
-        cleandf = df.drop(columns=['first_name','last_name'])
+        dataFrame = dataFrame.drop(columns=['first_name','last_name','level_0'])
         
-        return cleandf
+        return dataFrame
 
-    def clean_date_time(self,df):
+    def clean_date_time(self,dataFrame):
         # Convert columns to numeric, coercing invalid values to NaN
         columns_to_convert = ["day", "month", "year"]
         for col in columns_to_convert:
-            df[col] = pd.to_numeric(df[col], errors='coerce')
+            dataFrame[col] = pd.to_numeric(dataFrame[col], errors='coerce')
         #Change "NULL" strings data type into NULL data type
-        cleandf = df.replace(['NULL','N/A', 'None'] , None)
+        dataFrame = dataFrame.replace(['NULL','N/A', 'None'] , None)
         #Remove NULL values
-        cleandf = cleandf.dropna()
+        dataFrame = dataFrame.dropna()
 
-        return cleandf
+        return dataFrame
 
